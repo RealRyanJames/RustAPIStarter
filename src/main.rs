@@ -1,3 +1,4 @@
+use std::fmt;
 use axum::Router;
 use axum::routing::get;
 use crate::types::Types;
@@ -59,18 +60,44 @@ pub mod myinit {
     }
 }
 
+#[derive(Debug)]
+enum Route {
+    Home,
+    About,
+}
+
+impl fmt::Display for Route {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Route::Home => {
+                write!(f, "/")
+            }
+
+            Route::About => {
+                write!(f, "/About")
+            }
+        }
+    }
+}
+
 
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
 
-    let app = Router::new().route("/", get(myinit::send_message));
-    let listener = tokio::net::TcpListener::bind
-        ("0.0.0.0:5000").await.unwrap();
+    const IS_WORKING: bool = false;
 
-    let t: Types = Types::new(myinit::send_message().await);
+    if !IS_WORKING.to_string().is_empty() {
+        let app = Router::new().route(&*Route::Home.to_string(), get(myinit::send_message))
+            .route(&*Route::About.to_string(), get(myinit::get_lower_message("Hello And Welcome to About Page")));
+        let listener = tokio::net::TcpListener::bind
+            ("0.0.0.0:5000").await.unwrap();
 
-    clients_info::on_ready(t.get_()).await.expect("TODO: panic message");
 
-    axum::serve(listener, app).await.unwrap();
+        let t: Types = Types::new(myinit::send_message().await);
+
+        clients_info::on_ready(t.get_()).await.expect("TODO: panic message");
+
+        axum::serve(listener, app).await.unwrap();
+    }
 }

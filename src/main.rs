@@ -1,5 +1,24 @@
 use axum::Router;
 use axum::routing::get;
+use crate::types::Types;
+
+pub mod types {
+    pub struct Types {
+        text: String
+    }
+
+    impl Types {
+        pub fn get_(&self) -> String {
+            self.text.to_string()
+        }
+
+        pub(crate) fn new(data: String) -> Types {
+            Types {
+                text: data.to_string(),
+            }
+        }
+    }
+}
 
 pub mod clients_info {
     use mongodb::{Client, Collection};
@@ -13,15 +32,18 @@ pub mod clients_info {
         uri_from_client().to_lowercase()
     }
 
-    pub async fn on_ready(data: String) ->mongodb::error::Result<()> {
+
+    pub async fn on_ready(data: String) -> mongodb::error::Result<()> {
         let uri = lower_uri();
 
-        let client = Client::with_uri_str(uri).await?;
+        if !uri.trim().is_empty() {
+            let client = Client::with_uri_str(uri).await?;
 
-        let database = client.database("app");
-        let coll: Collection<Document> = database.collection("backend");
+            let database = client.database("app");
+            let coll: Collection<Document> = database.collection("backend");
 
-        coll.insert_one(doc! {"data": data}).await.expect("TODO: panic message");
+            coll.insert_one(doc! {"data": data}).await.expect("TODO: panic message");
+        }
 
         Ok(())
     }
@@ -46,7 +68,9 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind
         ("0.0.0.0:5000").await.unwrap();
 
-    clients_info::on_ready(myinit::send_message().await).await.expect("TODO: panic message");
+    let t: Types = Types::new(myinit::send_message().await);
+
+    clients_info::on_ready(t.get_()).await.expect("TODO: panic message");
 
     axum::serve(listener, app).await.unwrap();
 }
